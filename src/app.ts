@@ -2,8 +2,6 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import helmet from "helmet";
-import morgan from "morgan";
 
 import authRoutes from "./routes/auth.routes.js";
 import companyRoutes from "./routes/company.routes.js";
@@ -18,8 +16,6 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
-app.use(helmet());
-app.use(morgan("dev"));
 
 // 🔶 Inicialización por cold start (una sola vez por instancia)
 app.use(async (_req, _res, next) => {
