@@ -4,7 +4,12 @@ import { Client } from "./Client.js";
 import { Ticket } from "./Ticket.js";
 import { Message } from "./Message.js";
 
+let initialized = false;
+
 export const initAssociations = () => {
+  if (initialized) return;
+  initialized = true;
+
   Company.hasMany(Client, { as: "clients", foreignKey: "companyId" });
   Client.belongsTo(Company, { as: "company", foreignKey: "companyId" });
 
