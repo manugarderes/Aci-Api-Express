@@ -1,14 +1,19 @@
+// src/server.ts
 import app from "./app.js";
-import { sequelize } from "./models/index.js";
-import { initAssociations } from "./models/index.js";
+import { startup } from "./startup.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
 (async () => {
   try {
-    await sequelize.authenticate();
-    initAssociations();
-    await sequelize.sync();
+    // ⚠️ En Vercel no debemos levantar un puerto
+    if (process.env.VERCEL) {
+      console.log("Running on Vercel runtime; server listen is disabled.");
+      return;
+    }
+
+    // Para local: inicializamos y levantamos servidor
+    await startup();
     app.listen(PORT, () => {
       console.log(`API escuchando en http://localhost:${PORT}`);
     });
