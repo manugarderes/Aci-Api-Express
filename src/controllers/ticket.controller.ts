@@ -32,11 +32,12 @@ export const getAllUnPaid = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
 
   const tickets = await Ticket.findAll({
+    where: { paid: false }, 
     include: [
       {
         model: Client,
         as: "client",
-        where: { companyId, paid: false },
+        where: { companyId },
         required: true,
       },
     ],
@@ -50,11 +51,12 @@ export const getAllPaid = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
 
   const tickets = await Ticket.findAll({
+    where: { paid: true }, 
     include: [
       {
         model: Client,
         as: "client",
-        where: { companyId, paid: true },
+        where: { companyId },
         required: true,
       },
     ],
