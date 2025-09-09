@@ -22,9 +22,13 @@ const makeToken = (company: Company) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, password } = req.body || {};
-    if (!name || !password) {
-      return res.status(400).json({ error: "name y password son requeridos" });
+    const { name, password, masterKey } = req.body || {};
+    if (!name || !password || !masterKey) {
+      return res.status(400).json({ error: "name, password y Master Key son requeridos" });
+    }
+
+    if(masterKey != process.env.MASTER_KEY){
+      return res.status(401).json({ error: "Master Key inválida." });
     }
 
     const existing = await Company.findOne({ where: { name } });
