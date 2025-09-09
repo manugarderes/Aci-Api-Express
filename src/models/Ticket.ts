@@ -5,6 +5,7 @@ import { Client } from "./Client.js";
 export interface TicketAttributes {
   id: number;
   total: number;
+  currency: string;
   dueDate: Date | null;
   ticketUrl: string | null;
   paymentUrl: string | null;
@@ -20,6 +21,7 @@ export class Ticket extends Model<TicketAttributes, TicketCreationAttributes>
   implements TicketAttributes {
   declare id: number;
   declare total: number;
+  declare currency: string;
   declare dueDate: Date | null;
   declare ticketUrl: string | null;
   declare paymentUrl: string | null;
@@ -32,6 +34,7 @@ Ticket.init(
   {
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     total: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
+    currency: { type: DataTypes.STRING(500), allowNull: false, field: "currency", defaultValue: "USD" },
     dueDate: { type: DataTypes.DATE, allowNull: true, field: "due_date" },
     ticketUrl: { type: DataTypes.STRING(500), allowNull: true, field: "ticket_url" },
     paymentUrl: { type: DataTypes.STRING(500), allowNull: true, field: "payment_url" },

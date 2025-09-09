@@ -5,7 +5,7 @@ import crypto from "crypto";
 
 export const create = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
-  const { total, dueDate, ticketUrl, clientId } = req.body || {};
+  const { total, currency,  dueDate, ticketUrl, clientId } = req.body || {};
 
   if (clientId == null || total == null) {
     return res.status(400).json({ error: "total y clientId son requeridos" });
@@ -17,6 +17,7 @@ export const create = async (req: Request, res: Response) => {
 
   const ticket = await Ticket.create({
     total,
+    currency,
     dueDate: dueDate ? new Date(dueDate) : null,
     ticketUrl: ticketUrl || null,
     paymentUrl: null,
@@ -83,13 +84,14 @@ export const updateById = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const ticket = await assertTicketBelongs(id, companyId);
 
-  const { total, dueDate, ticketUrl, paymentUrl, paymentSecret, paid, clientId } = req.body || {};
+  const { total, currency, dueDate, ticketUrl, paymentUrl, paymentSecret, paid, clientId } = req.body || {};
 
   if (clientId !== undefined && clientId !== ticket.clientId) {
     await assertClientBelongs(Number(clientId), companyId);
     ticket.clientId = Number(clientId);
   }
   if (total !== undefined) ticket.total = total;
+  if (currency !== undefined) ticket.currency = currency;
   if (dueDate !== undefined) ticket.dueDate = dueDate ? new Date(dueDate) : null;
   if (ticketUrl !== undefined) ticket.ticketUrl = ticketUrl;
   if (paymentUrl !== undefined) ticket.paymentUrl = paymentUrl;
