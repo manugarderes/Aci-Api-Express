@@ -28,7 +28,7 @@ export const create = async (req: Request, res: Response) => {
   return res.status(201).json(ticket);
 };
 
-export const getAll = async (req: Request, res: Response) => {
+export const getAllUnPaid = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
 
   const tickets = await Ticket.findAll({
@@ -36,7 +36,25 @@ export const getAll = async (req: Request, res: Response) => {
       {
         model: Client,
         as: "client",
-        where: { companyId },
+        where: { companyId, paid: false },
+        required: true,
+      },
+    ],
+    order: [["dueDate", "ASC"]], 
+  });
+
+  return res.json(tickets);
+};
+
+export const getAllPaid = async (req: Request, res: Response) => {
+  const { companyId } = (req as any).user;
+
+  const tickets = await Ticket.findAll({
+    include: [
+      {
+        model: Client,
+        as: "client",
+        where: { companyId, paid: true },
         required: true,
       },
     ],
