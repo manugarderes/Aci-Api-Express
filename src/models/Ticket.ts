@@ -35,7 +35,7 @@ Ticket.init(
     id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
     total: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
     currency: { type: DataTypes.STRING(500), allowNull: false, field: "currency", defaultValue: "USD" },
-    dueDate: { type: DataTypes.DATE, allowNull: true, field: "due_date" },
+    dueDate: { type: DataTypes.DATEONLY, allowNull: true, field: "due_date" },
     ticketUrl: { type: DataTypes.STRING(500), allowNull: true, field: "ticket_url" },
     paymentUrl: { type: DataTypes.STRING(500), allowNull: true, field: "payment_url" },
     paymentSecret: { type: DataTypes.STRING(200), allowNull: false, field: "payment_secret" },

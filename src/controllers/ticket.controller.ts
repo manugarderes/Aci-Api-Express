@@ -17,7 +17,7 @@ export const create = async (req: Request, res: Response) => {
   const ticket = await Ticket.create({
     total,
     currency,
-    dueDate: dueDate ? new Date(dueDate) : null,
+    dueDate: dueDate || null,
     ticketUrl: ticketUrl || null,
     paymentUrl: null,
     paymentSecret,
