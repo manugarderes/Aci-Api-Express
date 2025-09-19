@@ -11,8 +11,8 @@ export const create = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
   const { daysFromDue, channel, template } = req.body;
 
-  if (daysFromDue == null || !channel) {
-    return res.status(400).json({ error: "daysFromDue y channel son requeridos" });
+  if (daysFromDue == null || !channel || !template) {
+    return res.status(400).json({ error: "daysFromDue, template y channel son requeridos" });
   }
 
   const reminder = await Reminder.create({
