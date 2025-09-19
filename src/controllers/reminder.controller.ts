@@ -3,7 +3,12 @@ import { Reminder } from "../models/index.js";
 
 export const getAll = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
-  const reminders = await Reminder.findAll({ where: { companyId } });
+
+  const reminders = await Reminder.findAll({
+    where: { companyId },
+    order: [["daysFromDue", "ASC"]], 
+  });
+
   return res.json(reminders);
 };
 
