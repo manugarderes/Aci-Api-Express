@@ -9,7 +9,7 @@ export const startup = async () => {
   initAssociations();
 
   // Para arrancar rápido. En prod “ideal” usar migraciones (CLI) en vez de sync().
-  await sequelize.sync();
+  await sequelize.sync({ alter: true });
 
   bootstrapped = true;
 };
