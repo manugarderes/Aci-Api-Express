@@ -24,11 +24,11 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { name, password, masterKey } = req.body || {};
     if (!name || !password || !masterKey) {
-      return res.status(400).json({ error: "name, password y Master Key son requeridos" });
+      return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
     if(masterKey != process.env.MASTER_KEY){
-      return res.status(401).json({ error: "Master Key inválida." });
+      return res.status(401).json({ error: "Llave maestra inválida." });
     }
 
     const existing = await Company.findOne({ where: { name } });
@@ -48,7 +48,7 @@ export const register = async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error("Error en register:", err);
-    return res.status(500).json({ error: "Error interno en register" });
+    return res.status(500).json({ error: "Error desconocido" });
   }
 };
 
@@ -56,7 +56,7 @@ export const login = async (req: Request, res: Response) => {
   try {
     const { name, password } = req.body || {};
     if (!name || !password) {
-      return res.status(400).json({ error: "name y password son requeridos" });
+      return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
     const company = await Company.findOne({
@@ -81,6 +81,6 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error("Error en login:", err);
-    return res.status(500).json({ error: "Error interno en login" });
+    return res.status(500).json({ error: "Error desconocido" });
   }
 };

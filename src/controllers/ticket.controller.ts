@@ -6,9 +6,8 @@ import crypto from "crypto";
 export const create = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
   const { total, currency,  dueDate, ticketUrl, clientId } = req.body || {};
-
-  if (clientId == null || total == null) {
-    return res.status(400).json({ error: "total y clientId son requeridos" });
+  if (!total || !currency || !dueDate || !ticketUrl || !clientId ) {
+    return res.status(400).json({ error: "Todos los campos son requeridos" });
   }
 
   await assertClientBelongs(Number(clientId), companyId);
@@ -85,6 +84,10 @@ export const updateById = async (req: Request, res: Response) => {
   const ticket = await assertTicketBelongs(id, companyId);
 
   const { total, currency, dueDate, ticketUrl, paymentUrl, paymentSecret, paid, clientId } = req.body || {};
+
+  if (!total || !currency || !dueDate || !ticketUrl || !clientId ) {
+    return res.status(400).json({ error: "Todos los campos son requeridos" });
+  }
 
   if (clientId !== undefined && clientId !== ticket.clientId) {
     await assertClientBelongs(Number(clientId), companyId);

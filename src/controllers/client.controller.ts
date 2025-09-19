@@ -4,6 +4,9 @@ import { Client } from "../models/index.js";
 export const create = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
   const { name, email, phone, points } = req.body || {};
+  if (!name || !email || !phone || !points) {
+    return res.status(400).json({ error: "Todos los campos son requeridos" });
+  }
   const client = await Client.create({ name, email, phone, points, companyId });
   return res.status(201).json(client);
 };
@@ -29,6 +32,9 @@ export const updateById = async (req: Request, res: Response) => {
   if (!client) return res.status(404).json({ error: "No encontrado" });
 
   const { name, email, phone, points } = req.body || {};
+  if (!name || !email || !phone || !points) {
+    return res.status(400).json({ error: "Todos los campos son requeridos" });
+  }
   if (name !== undefined) client.name = name;
   if (email !== undefined) client.email = email;
   if (phone !== undefined) client.phone = phone;
