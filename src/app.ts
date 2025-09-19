@@ -8,6 +8,7 @@ import companyRoutes from "./routes/company.routes.js";
 import clientRoutes from "./routes/client.routes.js";
 import ticketRoutes from "./routes/ticket.routes.js";
 import messageRoutes from "./routes/message.routes.js";
+import reminderRoutes from "./routes/reminder.routes.js";
 import { errorHandler } from "./utils/error.js";
 import { startup } from "./startup.js";
 
@@ -34,6 +35,7 @@ app.use("/companies", companyRoutes);
 app.use("/clients", clientRoutes);
 app.use("/tickets", ticketRoutes);
 app.use("/messages", messageRoutes);
+app.use("/reminders", reminderRoutes);
 
 app.use(errorHandler);
 
