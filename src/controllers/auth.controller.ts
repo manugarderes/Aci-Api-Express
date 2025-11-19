@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
-import { Company } from "../models/index.js";
+
+import { User, Company } from "../models/index.js";
 
 const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
 
-const makeToken = (company: Company) => {
+const makeToken = (user: User) => {
   const secret: Secret = process.env.JWT_SECRET as Secret;
   if (!secret) throw new Error("JWT_SECRET no definido en .env");
 
@@ -14,39 +15,70 @@ const makeToken = (company: Company) => {
   };
 
   return jwt.sign(
-    { companyId: company.id, name: company.name },
+    {
+      userId: user.id,
+      companyId: user.companyId,
+      isAdmin: user.isAdmin,
+    },
     secret,
     signOptions
   );
 };
 
+export const getUser = async (req: Request, res: Response) => {
+  const { userId, companyId } = (req as any).user;
+  const user = await User.findOne({ where: { id: userId } });
+  const company = await Company.findOne({ where: { id: companyId } });
+  return res.json({user, company});
+};
+
+
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, password, masterKey } = req.body || {};
-    if (!name || !password || !masterKey) {
+    const { companyName, name, password, masterKey } = req.body || {};
+
+    if (!companyName || !name || !password || !masterKey) {
       return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
-    if(masterKey != process.env.MASTER_KEY){
+    if (masterKey !== process.env.MASTER_KEY) {
       return res.status(401).json({ error: "Llave maestra inválida." });
     }
 
-    const existing = await Company.findOne({ where: { name } });
-    if (existing) {
-      return res.status(409).json({ error: "El nombre de compañía ya existe" });
+    const existingCompany = await Company.findOne({
+      where: { name: companyName },
+    });
+    if (existingCompany) {
+      return res
+        .status(409)
+        .json({ error: "El nombre de la compañía ya existe" });
     }
 
-    const hash = await bcrypt.hash(password, SALT_ROUNDS);
-    const company = await Company.create({ name, password: hash });
+    const company = await Company.create({
+      name: companyName,
+      logo: null,
+      colorPrimary: null,
+      colorSecondary: null,
+    });
 
-    const token = makeToken(company);
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const user = await User.create({
+      name: name,
+      password: hash,
+      isAdmin: true,
+      companyId: company.id,
+    });
+
+    const token = makeToken(user);
 
     return res.status(201).json({
-      id: company.id,
-      name: company.name,
+      userId: user.id,
+      companyId: company.id,
+      companyName: company.name,
+      isAdmin: true,
       token,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error en register:", err);
     return res.status(500).json({ error: "Error desconocido" });
   }
@@ -55,31 +87,34 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { name, password } = req.body || {};
+
     if (!name || !password) {
       return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
-    const company = await Company.findOne({
-      where: { name },
-      attributes: ["id", "name", "password"], 
+    const user = await User.findOne({
+      where: { name: name },
     });
-    if (!company) {
+
+    if (!user) {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
-    const ok = await bcrypt.compare(password, company.password);
+    const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
-    const token = makeToken(company);
+    const token = makeToken(user);
 
     return res.json({
-      id: company.id,
-      name: company.name,
+      userId: user.id,
+      companyId: user.companyId,
+      name: user.name,
+      isAdmin: user.isAdmin,
       token,
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Error en login:", err);
     return res.status(500).json({ error: "Error desconocido" });
   }

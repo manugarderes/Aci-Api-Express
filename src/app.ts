@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 
 import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
 import companyRoutes from "./routes/company.routes.js";
 import clientRoutes from "./routes/client.routes.js";
 import ticketRoutes from "./routes/ticket.routes.js";
@@ -31,6 +32,7 @@ app.use(async (_req, _res, next) => {
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
 app.use("/auth", authRoutes);
+app.use("/users", userRoutes);
 app.use("/companies", companyRoutes);
 app.use("/clients", clientRoutes);
 app.use("/tickets", ticketRoutes);
