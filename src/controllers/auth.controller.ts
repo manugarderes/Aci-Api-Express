@@ -84,6 +84,7 @@ export const register = async (req: Request, res: Response) => {
       userId: user.id,
       companyId: company.id,
       companyName: company.name,
+      name: user.name,
       isAdmin: true,
       token,
     });
