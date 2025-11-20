@@ -81,11 +81,8 @@ export const register = async (req: Request, res: Response) => {
     const token = makeToken(user);
 
     return res.status(201).json({
-      userId: user.id,
-      companyId: company.id,
-      companyName: company.name,
-      name: user.name,
-      isAdmin: true,
+      user,
+      company,
       token,
     });
   } catch (err) {
@@ -110,6 +107,10 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
+    const company = await Company.findOne({
+      where: {id: user.companyId}
+    })
+
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
       return res.status(401).json({ error: "Credenciales inválidas" });
@@ -118,10 +119,8 @@ export const login = async (req: Request, res: Response) => {
     const token = makeToken(user);
 
     return res.json({
-      userId: user.id,
-      companyId: user.companyId,
-      name: user.name,
-      isAdmin: user.isAdmin,
+      user,
+      company,
       token,
     });
   } catch (err) {
