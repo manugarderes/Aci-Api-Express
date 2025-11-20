@@ -54,6 +54,15 @@ export const register = async (req: Request, res: Response) => {
         .json({ error: "El nombre de la compañía ya existe" });
     }
 
+    const existingUser = await User.findOne({
+      where: { name: name },
+    });
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ error: "El nombre de usuario ya existe" });
+    }
+
     const company = await Company.create({
       name: companyName,
       logo: null,
