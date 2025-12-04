@@ -47,18 +47,24 @@ export const updateById = async (req: Request, res: Response) => {
   if (!reminder) return res.status(404).json({ error: "No encontrado" });
 
   const { daysFromDue, channel, template } = req.body;
-  
-  if (!daysFromDue || !channel || !template) {
+
+
+  if (daysFromDue === undefined || channel === undefined || template === undefined) {
     return res.status(400).json({ error: "Todos los campos son requeridos" });
   }
 
-  if (daysFromDue !== undefined) reminder.daysFromDue = daysFromDue;
-  if (channel !== undefined) reminder.channel = channel;
-  if (template !== undefined) reminder.template = template;
+  reminder.daysFromDue = Number(daysFromDue);
+  reminder.channel = channel;
+  reminder.template = template;
+
+  console.log(reminder);
+  
 
   await reminder.save();
+
   return res.json(reminder);
 };
+
 
 export const removeById = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;

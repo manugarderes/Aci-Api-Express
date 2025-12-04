@@ -16,11 +16,12 @@ export class Reminder extends Model<
   ReminderAttributes,
   ReminderCreationAttributes
 > implements ReminderAttributes {
-  public id!: number;
-  public companyId!: number;
-  public daysFromDue!: number;
-  public channel!: "email" | "whatsapp" | "whatsapp_ai";
-  public template!: string | null;
+  // 👇 Estas declaraciones son solo de TypeScript, no existen en runtime
+  declare id: number;
+  declare companyId: number;
+  declare daysFromDue: number;
+  declare channel: "email" | "whatsapp" | "whatsapp_ai";
+  declare template: string | null;
 }
 
 Reminder.init(
@@ -34,5 +35,8 @@ Reminder.init(
     },
     template: { type: DataTypes.TEXT, allowNull: true },
   },
-  { tableName: "reminders", sequelize }
+  {
+    tableName: "reminders",
+    sequelize,
+  }
 );
