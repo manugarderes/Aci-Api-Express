@@ -1,29 +1,48 @@
 import { Request, Response } from "express";
-import { Ticket, Client } from "../models/index.js";
-import { assertClientBelongs, assertTicketBelongs } from "../utils/ownership.js";
 import crypto from "crypto";
+import { supabase } from "../config/supabase.js";
+import type { Ticket } from "../models/Ticket.js";
+import type { Client } from "../models/Client.js";
 
 export const create = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
-  const { total, currency,  dueDate, ticketUrl, clientId } = req.body || {};
-  if (!total || !currency || !dueDate || !ticketUrl || !clientId ) {
+  const { total, currency, dueDate, ticketUrl, clientId } = req.body || {};
+
+  if (!total || !currency || !dueDate || !ticketUrl || !clientId) {
     return res.status(400).json({ error: "Todos los campos son requeridos" });
   }
 
-  await assertClientBelongs(Number(clientId), companyId);
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .eq("company_id", companyId)
+    .single<Pick<Client, "id">>();
+
+  if (!client) {
+    return res.status(403).json({ error: "Cliente inválido" });
+  }
 
   const paymentSecret = crypto.randomBytes(32).toString("hex");
 
-  const ticket = await Ticket.create({
-    total,
-    currency,
-    dueDate: dueDate || null,
-    ticketUrl: ticketUrl || null,
-    paymentUrl: null,
-    paymentSecret,
-    paid: false,
-    clientId,
-  });
+  const { data: ticket, error } = await supabase
+    .from("tickets")
+    .insert({
+      total,
+      currency,
+      due_date: dueDate,
+      ticket_url: ticketUrl,
+      payment_url: null,
+      payment_secret: paymentSecret,
+      paid: false,
+      client_id: clientId,
+    })
+    .select()
+    .single<Ticket>();
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
 
   return res.status(201).json(ticket);
 };
@@ -31,18 +50,19 @@ export const create = async (req: Request, res: Response) => {
 export const getAllUnPaid = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
 
-  const tickets = await Ticket.findAll({
-    where: { paid: false }, 
-    include: [
-      {
-        model: Client,
-        as: "client",
-        where: { companyId },
-        required: true,
-      },
-    ],
-    order: [["dueDate", "ASC"]], 
-  });
+  const { data: tickets, error } = await supabase
+    .from("tickets")
+    .select(`
+      *,
+      client:clients (*)
+    `)
+    .eq("paid", false)
+    .eq("client.company_id", companyId)
+    .order("due_date", { ascending: true });
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
 
   return res.json(tickets);
 };
@@ -50,89 +70,162 @@ export const getAllUnPaid = async (req: Request, res: Response) => {
 export const getAllPaid = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
 
-  const tickets = await Ticket.findAll({
-    where: { paid: true }, 
-    include: [
-      {
-        model: Client,
-        as: "client",
-        where: { companyId },
-        required: true,
-      },
-    ],
-    order: [["dueDate", "ASC"]], 
-  });
+  const { data: tickets, error } = await supabase
+    .from("tickets")
+    .select(`
+      *,
+      client:clients (*)
+    `)
+    .eq("paid", true)
+    .eq("client.company_id", companyId)
+    .order("due_date", { ascending: true });
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
 
   return res.json(tickets);
 };
 
-
 export const getById = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
   const id = Number(req.params.id);
-  const ticket = await Ticket.findOne({
-    where: { id },
-    include: [{ model: Client, as: "client", where: { companyId }, required: true }],
-  });
-  if (!ticket) return res.status(404).json({ error: "No encontrado" });
+
+  const { data: ticket, error } = await supabase
+    .from("tickets")
+    .select(`
+      *,
+      client:clients (*)
+    `)
+    .eq("id", id)
+    .eq("client.company_id", companyId)
+    .single<Ticket & { client: Client }>();
+
+  if (error || !ticket) {
+    return res.status(404).json({ error: "No encontrado" });
+  }
+
   return res.json(ticket);
 };
 
 export const updateById = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
   const id = Number(req.params.id);
-  const ticket = await assertTicketBelongs(id, companyId);
 
-  const { total, currency, dueDate, ticketUrl, paymentUrl, paymentSecret, paid, clientId } = req.body || {};
+  const { total, currency, dueDate, ticketUrl, paymentUrl, paymentSecret, paid, clientId } =
+    req.body || {};
 
-  if (!total || !currency || !dueDate || !ticketUrl || !clientId ) {
+  if (!total || !currency || !dueDate || !ticketUrl || !clientId) {
     return res.status(400).json({ error: "Todos los campos son requeridos" });
   }
 
-  if (clientId !== undefined && clientId !== ticket.clientId) {
-    await assertClientBelongs(Number(clientId), companyId);
-    ticket.clientId = Number(clientId);
-  }
-  if (total !== undefined) ticket.total = total;
-  if (currency !== undefined) ticket.currency = currency;
-  if (dueDate !== undefined) ticket.dueDate = dueDate ? new Date(dueDate) : null;
-  if (ticketUrl !== undefined) ticket.ticketUrl = ticketUrl;
-  if (paymentUrl !== undefined) ticket.paymentUrl = paymentUrl;
-  if (paymentSecret !== undefined) ticket.paymentSecret = paymentSecret;
-  if (paid !== undefined) ticket.paid = !!paid;
+  const { data: client } = await supabase
+    .from("clients")
+    .select("id")
+    .eq("id", clientId)
+    .eq("company_id", companyId)
+    .single<Pick<Client, "id">>();
 
-  await ticket.save();
+  if (!client) {
+    return res.status(403).json({ error: "Cliente inválido" });
+  }
+
+  const { data: ticket, error } = await supabase
+    .from("tickets")
+    .update({
+      total,
+      currency,
+      due_date: dueDate,
+      ticket_url: ticketUrl,
+      payment_url: paymentUrl,
+      payment_secret: paymentSecret,
+      paid: !!paid,
+      client_id: clientId,
+    })
+    .eq("id", id)
+    .select()
+    .single<Ticket>();
+
+  if (error || !ticket) {
+    return res.status(404).json({ error: "No encontrado" });
+  }
+
   return res.json(ticket);
 };
 
 export const removeById = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
   const id = Number(req.params.id);
-  await assertTicketBelongs(id, companyId);
-  const deleted = await Ticket.destroy({ where: { id } });
-  return res.json({ deleted });
+
+  const { error, count } = await supabase
+    .from("tickets")
+    .delete({ count: "exact" })
+    .eq("id", id)
+    .eq("client.company_id", companyId);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  return res.json({ deleted: count === 1 });
 };
 
 export const getAllByClient = async (req: Request, res: Response) => {
   const { companyId } = (req as any).user;
   const clientId = Number(req.params.clientId);
-  await assertClientBelongs(clientId, companyId);
-  const tickets = await Ticket.findAll({ where: { clientId } });
+
+  const { data: tickets, error } = await supabase
+    .from("tickets")
+    .select("*")
+    .eq("client_id", clientId)
+    .eq("client.company_id", companyId);
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
   return res.json(tickets);
 };
 
 export const payWithSecret = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const { secret, receiptUrl } = req.body || {};
+
   if (!secret || !receiptUrl) {
     return res.status(400).json({ error: "secret y receiptUrl son requeridos" });
   }
-  const ticket = await Ticket.findByPk(id);
-  if (!ticket) return res.status(404).json({ error: "Ticket no encontrado" });
-  if (ticket.paymentSecret !== secret) {
+
+  const { data: ticket, error } = await supabase
+    .from("tickets")
+    .select("*")
+    .eq("id", id)
+    .single<Ticket>();
+
+  if (error || !ticket) {
+    return res.status(404).json({ error: "Ticket no encontrado" });
+  }
+
+  if (ticket.payment_secret !== secret) {
     return res.status(403).json({ error: "Secret inválido" });
   }
-  ticket.paymentUrl = receiptUrl;
-  await ticket.save();
-  return res.json({ ok: true, id: ticket.id, paymentUrl: ticket.paymentUrl, paid: ticket.paid });
+
+  const { data: updated, error: updateError } = await supabase
+    .from("tickets")
+    .update({
+      payment_url: receiptUrl,
+    })
+    .eq("id", id)
+    .select()
+    .single<Ticket>();
+
+  if (updateError) {
+    return res.status(500).json({ error: updateError.message });
+  }
+
+  return res.json({
+    ok: true,
+    id: updated.id,
+    paymentUrl: updated.payment_url,
+    paid: updated.paid,
+  });
 };

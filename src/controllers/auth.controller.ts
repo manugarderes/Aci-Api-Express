@@ -2,7 +2,9 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 
-import { User, Company } from "../models/index.js";
+import { supabase } from "../config/supabase.js";
+import type { User } from "../models/User.js";
+import type { Company } from "../models/Company.js";
 
 const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
 
@@ -17,8 +19,8 @@ const makeToken = (user: User) => {
   return jwt.sign(
     {
       userId: user.id,
-      companyId: user.companyId,
-      isAdmin: user.isAdmin,
+      companyId: user.company_id,
+      isAdmin: user.is_admin,
     },
     secret,
     signOptions
@@ -27,11 +29,29 @@ const makeToken = (user: User) => {
 
 export const getUser = async (req: Request, res: Response) => {
   const { userId, companyId } = (req as any).user;
-  const user = await User.findOne({ where: { id: userId } });
-  const company = await Company.findOne({ where: { id: companyId } });
-  return res.json({user, company});
-};
 
+  const { data: user, error: userError } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", userId)
+    .single<User>();
+
+  if (userError || !user) {
+    return res.status(404).json({ error: "Usuario no encontrado" });
+  }
+
+  const { data: company, error: companyError } = await supabase
+    .from("companies")
+    .select("*")
+    .eq("id", companyId)
+    .single<Company>();
+
+  if (companyError || !company) {
+    return res.status(404).json({ error: "Compañía no encontrada" });
+  }
+
+  return res.json({ user, company });
+};
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -45,38 +65,61 @@ export const register = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Llave maestra inválida." });
     }
 
-    const existingCompany = await Company.findOne({
-      where: { name: companyName },
-    });
+    /* --- company exists --- */
+    const { data: existingCompany } = await supabase
+      .from("companies")
+      .select("id")
+      .eq("name", companyName)
+      .maybeSingle<Pick<Company, "id">>();
+
     if (existingCompany) {
       return res
         .status(409)
         .json({ error: "El nombre de la compañía ya existe" });
     }
 
-    const existingUser = await User.findOne({
-      where: { name: name },
-    });
+    /* --- user exists --- */
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("name", name)
+      .maybeSingle<Pick<User, "id">>();
+
     if (existingUser) {
       return res
         .status(409)
         .json({ error: "El nombre de usuario ya existe" });
     }
 
-    const company = await Company.create({
-      name: companyName,
-      logo: null,
-      colorPrimary: null,
-      colorSecondary: null,
-    });
+    /* --- create company --- */
+    const { data: company, error: companyError } = await supabase
+      .from("companies")
+      .insert({
+        name: companyName,
+        logo: null,
+        color_primary: null,
+        color_secondary: null,
+      })
+      .select()
+      .single<Company>();
 
+    if (companyError || !company) throw companyError;
+
+    /* --- create user --- */
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
-    const user = await User.create({
-      name: name,
-      password: hash,
-      isAdmin: true,
-      companyId: company.id,
-    });
+
+    const { data: user, error: userError } = await supabase
+      .from("users")
+      .insert({
+        name,
+        password: hash,
+        is_admin: true,
+        company_id: company.id,
+      })
+      .select()
+      .single<User>();
+
+    if (userError || !user) throw userError;
 
     const token = makeToken(user);
 
@@ -91,6 +134,9 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
+/* =========================
+   LOGIN
+========================= */
 export const login = async (req: Request, res: Response) => {
   try {
     const { name, password } = req.body || {};
@@ -99,22 +145,26 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
-    const user = await User.findOne({
-      where: { name: name },
-    });
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("name", name)
+      .single<User>();
 
-    if (!user) {
+    if (error || !user) {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
-
-    const company = await Company.findOne({
-      where: {id: user.companyId}
-    })
 
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
+
+    const { data: company } = await supabase
+      .from("companies")
+      .select("*")
+      .eq("id", user.company_id)
+      .single<Company>();
 
     const token = makeToken(user);
 

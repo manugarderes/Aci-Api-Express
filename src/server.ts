@@ -1,6 +1,5 @@
 // src/server.ts
 import app from "./app.js";
-import { startup } from "./startup.js";
 
 const PORT = Number(process.env.PORT) || 3000;
 
@@ -12,8 +11,6 @@ const PORT = Number(process.env.PORT) || 3000;
       return;
     }
 
-    // Para local: inicializamos y levantamos servidor
-    await startup();
     app.listen(PORT, () => {
       console.log(`API escuchando en http://localhost:${PORT}`);
     });
