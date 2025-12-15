@@ -11,9 +11,9 @@ export const getAll = async (req: Request, res: Response) => {
     .from("messages")
     .select(`
       *,
-      ticket:tickets (
+      ticket:tickets!inner (
         *,
-        client:clients (*)
+        client:clients!inner (*)
       )
     `)
     .eq("ticket.client.company_id", company_id);
@@ -37,9 +37,9 @@ export const getById = async (req: Request, res: Response) => {
     .from("messages")
     .select(`
       *,
-      ticket:tickets (
+      ticket:tickets!inner (
         *,
-        client:clients (*)
+        client:clients!inner (*)
       )
     `)
     .eq("id", id)
