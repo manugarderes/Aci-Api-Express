@@ -12,41 +12,41 @@ const makeToken = (user: User) => {
   const secret: Secret = process.env.JWT_SECRET as Secret;
   if (!secret) throw new Error("JWT_SECRET no definido en .env");
 
-  const signOptions: SignOptions = {
+  const sign_options: SignOptions = {
     expiresIn: (process.env.JWT_EXPIRES || "7d") as any,
   };
 
   return jwt.sign(
     {
-      userId: user.id,
-      companyId: user.company_id,
-      isAdmin: user.is_admin,
+      user_id: user.id,
+      company_id: user.company_id,
+      is_admin: user.is_admin,
     },
     secret,
-    signOptions
+    sign_options
   );
 };
 
 export const getUser = async (req: Request, res: Response) => {
-  const { userId, companyId } = (req as any).user;
+  const { user_id, company_id } = (req as any).user;
 
-  const { data: user, error: userError } = await supabase
+  const { data: user, error: user_error } = await supabase
     .from("users")
     .select("*")
-    .eq("id", userId)
+    .eq("id", user_id)
     .single<User>();
 
-  if (userError || !user) {
+  if (user_error || !user) {
     return res.status(404).json({ error: "Usuario no encontrado" });
   }
 
-  const { data: company, error: companyError } = await supabase
+  const { data: company, error: company_error } = await supabase
     .from("companies")
     .select("*")
-    .eq("id", companyId)
+    .eq("id", company_id)
     .single<Company>();
 
-  if (companyError || !company) {
+  if (company_error || !company) {
     return res.status(404).json({ error: "Compañía no encontrada" });
   }
 
@@ -55,47 +55,44 @@ export const getUser = async (req: Request, res: Response) => {
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { companyName, name, password, masterKey } = req.body || {};
+    const { company_name, name, password, master_key } = req.body || {};
 
-    if (!companyName || !name || !password || !masterKey) {
+    if (!company_name || !name || !password || !master_key) {
       return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
-    if (masterKey !== process.env.MASTER_KEY) {
+    if (master_key !== process.env.MASTER_KEY) {
       return res.status(401).json({ error: "Llave maestra inválida." });
     }
 
-    /* --- company exists --- */
-    const { data: existingCompany } = await supabase
+    const { data: existing_company } = await supabase
       .from("companies")
       .select("id")
-      .eq("name", companyName)
+      .eq("name", company_name)
       .maybeSingle<Pick<Company, "id">>();
 
-    if (existingCompany) {
+    if (existing_company) {
       return res
         .status(409)
         .json({ error: "El nombre de la compañía ya existe" });
     }
 
-    /* --- user exists --- */
-    const { data: existingUser } = await supabase
+    const { data: existing_user } = await supabase
       .from("users")
       .select("id")
       .eq("name", name)
       .maybeSingle<Pick<User, "id">>();
 
-    if (existingUser) {
+    if (existing_user) {
       return res
         .status(409)
         .json({ error: "El nombre de usuario ya existe" });
     }
 
-    /* --- create company --- */
-    const { data: company, error: companyError } = await supabase
+    const { data: company, error: company_error } = await supabase
       .from("companies")
       .insert({
-        name: companyName,
+        name: company_name,
         logo: null,
         color_primary: null,
         color_secondary: null,
@@ -103,12 +100,11 @@ export const register = async (req: Request, res: Response) => {
       .select()
       .single<Company>();
 
-    if (companyError || !company) throw companyError;
+    if (company_error || !company) throw company_error;
 
-    /* --- create user --- */
     const hash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    const { data: user, error: userError } = await supabase
+    const { data: user, error: user_error } = await supabase
       .from("users")
       .insert({
         name,
@@ -119,7 +115,7 @@ export const register = async (req: Request, res: Response) => {
       .select()
       .single<User>();
 
-    if (userError || !user) throw userError;
+    if (user_error || !user) throw user_error;
 
     const token = makeToken(user);
 
@@ -134,9 +130,6 @@ export const register = async (req: Request, res: Response) => {
   }
 };
 
-/* =========================
-   LOGIN
-========================= */
 export const login = async (req: Request, res: Response) => {
   try {
     const { name, password } = req.body || {};
@@ -145,13 +138,13 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
-    const { data: user, error } = await supabase
+    const { data: user, error: user_error } = await supabase
       .from("users")
       .select("*")
       .eq("name", name)
       .single<User>();
 
-    if (error || !user) {
+    if (user_error || !user) {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
@@ -160,11 +153,15 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Credenciales inválidas" });
     }
 
-    const { data: company } = await supabase
+    const { data: company, error: company_error } = await supabase
       .from("companies")
       .select("*")
       .eq("id", user.company_id)
       .single<Company>();
+
+    if (company_error || !company) {
+      return res.status(404).json({ error: "Compañía no encontrada" });
+    }
 
     const token = makeToken(user);
 

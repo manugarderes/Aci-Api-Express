@@ -2,9 +2,8 @@ import { Request, Response } from "express";
 import { supabase } from "../config/supabase.js";
 import type { Client } from "../models/Client.js";
 
-
 export const create = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const { name, email, phone, points } = req.body || {};
 
   if (!name || !email || !phone || points === undefined) {
@@ -18,7 +17,7 @@ export const create = async (req: Request, res: Response) => {
       email,
       phone,
       points,
-      company_id: companyId,
+      company_id,
     })
     .select()
     .single<Client>();
@@ -30,14 +29,13 @@ export const create = async (req: Request, res: Response) => {
   return res.status(201).json(client);
 };
 
-
 export const getAll = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
 
   const { data: clients, error } = await supabase
     .from("clients")
     .select("*")
-    .eq("company_id", companyId)
+    .eq("company_id", company_id)
     .order("id");
 
   if (error) {
@@ -48,14 +46,14 @@ export const getAll = async (req: Request, res: Response) => {
 };
 
 export const getById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
 
   const { data: client, error } = await supabase
     .from("clients")
     .select("*")
     .eq("id", id)
-    .eq("company_id", companyId)
+    .eq("company_id", company_id)
     .single<Client>();
 
   if (error || !client) {
@@ -65,9 +63,8 @@ export const getById = async (req: Request, res: Response) => {
   return res.json(client);
 };
 
-
 export const updateById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
   const { name, email, phone, points } = req.body || {};
 
@@ -84,7 +81,7 @@ export const updateById = async (req: Request, res: Response) => {
       points,
     })
     .eq("id", id)
-    .eq("company_id", companyId)
+    .eq("company_id", company_id)
     .select()
     .single<Client>();
 
@@ -95,16 +92,15 @@ export const updateById = async (req: Request, res: Response) => {
   return res.json(client);
 };
 
-
 export const removeById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
 
   const { error, count } = await supabase
     .from("clients")
     .delete({ count: "exact" })
     .eq("id", id)
-    .eq("company_id", companyId);
+    .eq("company_id", company_id);
 
   if (error) {
     return res.status(500).json({ error: error.message });

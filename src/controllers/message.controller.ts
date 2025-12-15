@@ -5,7 +5,7 @@ import type { Ticket } from "../models/Ticket.js";
 import type { Client } from "../models/Client.js";
 
 export const getAll = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
 
   const { data: messages, error } = await supabase
     .from("messages")
@@ -16,19 +16,21 @@ export const getAll = async (req: Request, res: Response) => {
         client:clients (*)
       )
     `)
-    .eq("ticket.client.company_id", companyId);
+    .eq("ticket.client.company_id", company_id);
 
   if (error) {
     return res.status(500).json({ error: error.message });
   }
 
-  return res.json(messages as (Message & {
-    ticket: Ticket & { client: Client };
-  })[]);
+  return res.json(
+    messages as (Message & {
+      ticket: Ticket & { client: Client };
+    })[]
+  );
 };
 
 export const getById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
 
   const { data: message, error } = await supabase
@@ -41,14 +43,16 @@ export const getById = async (req: Request, res: Response) => {
       )
     `)
     .eq("id", id)
-    .eq("ticket.client.company_id", companyId)
+    .eq("ticket.client.company_id", company_id)
     .single();
 
   if (error || !message) {
     return res.status(404).json({ error: "No encontrado" });
   }
 
-  return res.json(message as Message & {
-    ticket: Ticket & { client: Client };
-  });
+  return res.json(
+    message as Message & {
+      ticket: Ticket & { client: Client };
+    }
+  );
 };

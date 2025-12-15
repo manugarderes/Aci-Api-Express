@@ -3,12 +3,12 @@ import { supabase } from "../config/supabase.js";
 import type { Reminder } from "../models/Reminder.js";
 
 export const getAll = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
 
   const { data: reminders, error } = await supabase
     .from("reminders")
     .select("*")
-    .eq("company_id", companyId)
+    .eq("company_id", company_id)
     .order("days_from_due", { ascending: true });
 
   if (error) {
@@ -19,11 +19,11 @@ export const getAll = async (req: Request, res: Response) => {
 };
 
 export const create = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
-  const { daysFromDue, channel, template } = req.body;
+  const { company_id } = (req as any).user;
+  const { days_from_due, channel, template } = req.body;
 
   if (
-    daysFromDue === undefined ||
+    days_from_due === undefined ||
     channel === undefined ||
     template === undefined
   ) {
@@ -33,8 +33,8 @@ export const create = async (req: Request, res: Response) => {
   const { data: reminder, error } = await supabase
     .from("reminders")
     .insert({
-      company_id: companyId,
-      days_from_due: Number(daysFromDue),
+      company_id,
+      days_from_due: Number(days_from_due),
       channel,
       template,
     })
@@ -49,14 +49,14 @@ export const create = async (req: Request, res: Response) => {
 };
 
 export const getById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
 
   const { data: reminder, error } = await supabase
     .from("reminders")
     .select("*")
     .eq("id", id)
-    .eq("company_id", companyId)
+    .eq("company_id", company_id)
     .single<Reminder>();
 
   if (error || !reminder) {
@@ -67,12 +67,12 @@ export const getById = async (req: Request, res: Response) => {
 };
 
 export const updateById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
-  const { daysFromDue, channel, template } = req.body;
+  const { days_from_due, channel, template } = req.body;
 
   if (
-    daysFromDue === undefined ||
+    days_from_due === undefined ||
     channel === undefined ||
     template === undefined
   ) {
@@ -82,12 +82,12 @@ export const updateById = async (req: Request, res: Response) => {
   const { data: reminder, error } = await supabase
     .from("reminders")
     .update({
-      days_from_due: Number(daysFromDue),
+      days_from_due: Number(days_from_due),
       channel,
       template,
     })
     .eq("id", id)
-    .eq("company_id", companyId)
+    .eq("company_id", company_id)
     .select()
     .single<Reminder>();
 
@@ -99,14 +99,14 @@ export const updateById = async (req: Request, res: Response) => {
 };
 
 export const removeById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
 
   const { error, count } = await supabase
     .from("reminders")
     .delete({ count: "exact" })
     .eq("id", id)
-    .eq("company_id", companyId);
+    .eq("company_id", company_id);
 
   if (error) {
     return res.status(500).json({ error: error.message });

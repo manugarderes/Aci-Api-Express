@@ -5,37 +5,37 @@ import type { Ticket } from "../models/Ticket.js";
 import type { Client } from "../models/Client.js";
 
 export const create = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
-  const { total, currency, dueDate, ticketUrl, clientId } = req.body || {};
+  const { company_id } = (req as any).user;
+  const { total, currency, due_date, ticket_url, client_id } = req.body || {};
 
-  if (!total || !currency || !dueDate || !ticketUrl || !clientId) {
+  if (!total || !currency || !due_date || !ticket_url || !client_id) {
     return res.status(400).json({ error: "Todos los campos son requeridos" });
   }
 
   const { data: client } = await supabase
     .from("clients")
     .select("id")
-    .eq("id", clientId)
-    .eq("company_id", companyId)
+    .eq("id", client_id)
+    .eq("company_id", company_id)
     .single<Pick<Client, "id">>();
 
   if (!client) {
     return res.status(403).json({ error: "Cliente inválido" });
   }
 
-  const paymentSecret = crypto.randomBytes(32).toString("hex");
+  const payment_secret = crypto.randomBytes(32).toString("hex");
 
   const { data: ticket, error } = await supabase
     .from("tickets")
     .insert({
       total,
       currency,
-      due_date: dueDate,
-      ticket_url: ticketUrl,
+      due_date,
+      ticket_url,
       payment_url: null,
-      payment_secret: paymentSecret,
+      payment_secret,
       paid: false,
-      client_id: clientId,
+      client_id,
     })
     .select()
     .single<Ticket>();
@@ -48,7 +48,7 @@ export const create = async (req: Request, res: Response) => {
 };
 
 export const getAllUnPaid = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
 
   const { data: tickets, error } = await supabase
     .from("tickets")
@@ -57,7 +57,7 @@ export const getAllUnPaid = async (req: Request, res: Response) => {
       client:clients (*)
     `)
     .eq("paid", false)
-    .eq("client.company_id", companyId)
+    .eq("client.company_id", company_id)
     .order("due_date", { ascending: true });
 
   if (error) {
@@ -68,7 +68,7 @@ export const getAllUnPaid = async (req: Request, res: Response) => {
 };
 
 export const getAllPaid = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
 
   const { data: tickets, error } = await supabase
     .from("tickets")
@@ -77,7 +77,7 @@ export const getAllPaid = async (req: Request, res: Response) => {
       client:clients (*)
     `)
     .eq("paid", true)
-    .eq("client.company_id", companyId)
+    .eq("client.company_id", company_id)
     .order("due_date", { ascending: true });
 
   if (error) {
@@ -88,7 +88,7 @@ export const getAllPaid = async (req: Request, res: Response) => {
 };
 
 export const getById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
 
   const { data: ticket, error } = await supabase
@@ -98,7 +98,7 @@ export const getById = async (req: Request, res: Response) => {
       client:clients (*)
     `)
     .eq("id", id)
-    .eq("client.company_id", companyId)
+    .eq("client.company_id", company_id)
     .single<Ticket & { client: Client }>();
 
   if (error || !ticket) {
@@ -109,21 +109,29 @@ export const getById = async (req: Request, res: Response) => {
 };
 
 export const updateById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
 
-  const { total, currency, dueDate, ticketUrl, paymentUrl, paymentSecret, paid, clientId } =
-    req.body || {};
+  const {
+    total,
+    currency,
+    due_date,
+    ticket_url,
+    payment_url,
+    payment_secret,
+    paid,
+    client_id,
+  } = req.body || {};
 
-  if (!total || !currency || !dueDate || !ticketUrl || !clientId) {
+  if (!total || !currency || !due_date || !ticket_url || !client_id) {
     return res.status(400).json({ error: "Todos los campos son requeridos" });
   }
 
   const { data: client } = await supabase
     .from("clients")
     .select("id")
-    .eq("id", clientId)
-    .eq("company_id", companyId)
+    .eq("id", client_id)
+    .eq("company_id", company_id)
     .single<Pick<Client, "id">>();
 
   if (!client) {
@@ -135,12 +143,12 @@ export const updateById = async (req: Request, res: Response) => {
     .update({
       total,
       currency,
-      due_date: dueDate,
-      ticket_url: ticketUrl,
-      payment_url: paymentUrl,
-      payment_secret: paymentSecret,
+      due_date,
+      ticket_url,
+      payment_url,
+      payment_secret,
       paid: !!paid,
-      client_id: clientId,
+      client_id,
     })
     .eq("id", id)
     .select()
@@ -154,14 +162,14 @@ export const updateById = async (req: Request, res: Response) => {
 };
 
 export const removeById = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
   const id = Number(req.params.id);
 
   const { error, count } = await supabase
     .from("tickets")
     .delete({ count: "exact" })
     .eq("id", id)
-    .eq("client.company_id", companyId);
+    .eq("client.company_id", company_id);
 
   if (error) {
     return res.status(500).json({ error: error.message });
@@ -171,14 +179,14 @@ export const removeById = async (req: Request, res: Response) => {
 };
 
 export const getAllByClient = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
-  const clientId = Number(req.params.clientId);
+  const { company_id } = (req as any).user;
+  const client_id = Number(req.params.clientId);
 
   const { data: tickets, error } = await supabase
     .from("tickets")
     .select("*")
-    .eq("client_id", clientId)
-    .eq("client.company_id", companyId);
+    .eq("client_id", client_id)
+    .eq("client.company_id", company_id);
 
   if (error) {
     return res.status(500).json({ error: error.message });
@@ -189,10 +197,12 @@ export const getAllByClient = async (req: Request, res: Response) => {
 
 export const payWithSecret = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
-  const { secret, receiptUrl } = req.body || {};
+  const { secret, receipt_url } = req.body || {};
 
-  if (!secret || !receiptUrl) {
-    return res.status(400).json({ error: "secret y receiptUrl son requeridos" });
+  if (!secret || !receipt_url) {
+    return res
+      .status(400)
+      .json({ error: "secret y receipt_url son requeridos" });
   }
 
   const { data: ticket, error } = await supabase
@@ -212,7 +222,7 @@ export const payWithSecret = async (req: Request, res: Response) => {
   const { data: updated, error: updateError } = await supabase
     .from("tickets")
     .update({
-      payment_url: receiptUrl,
+      payment_url: receipt_url,
     })
     .eq("id", id)
     .select()
@@ -225,7 +235,7 @@ export const payWithSecret = async (req: Request, res: Response) => {
   return res.json({
     ok: true,
     id: updated.id,
-    paymentUrl: updated.payment_url,
+    payment_url: updated.payment_url,
     paid: updated.paid,
   });
 };

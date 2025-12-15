@@ -6,39 +6,32 @@ import type { User } from "../models/User.js";
 const SALT_ROUNDS = parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10);
 
 export const getAllUsers = async (req: Request, res: Response) => {
-  const { companyId, isAdmin } = (req as any).user;
+  const { company_id, is_admin } = (req as any).user;
 
-  if (!isAdmin) {
+  if (!is_admin) {
     return res.status(403).json({ error: "Solo administradores." });
   }
 
   const { data: users, error } = await supabase
     .from("users")
     .select("id, name, is_admin, company_id")
-    .eq("company_id", companyId);
+    .eq("company_id", company_id);
 
   if (error) {
     return res.status(500).json({ error: error.message });
   }
 
-  return res.json(
-    users?.map((u) => ({
-      id: u.id,
-      name: u.name,
-      isAdmin: u.is_admin,
-      companyId: u.company_id,
-    }))
-  );
+  return res.json(users);
 };
 
 export const createUser = async (req: Request, res: Response) => {
-  const { companyId, isAdmin } = (req as any).user;
+  const { company_id, is_admin } = (req as any).user;
 
-  if (!isAdmin) {
+  if (!is_admin) {
     return res.status(403).json({ error: "Solo administradores." });
   }
 
-  const { name, password, isAdmin: newIsAdmin } = req.body || {};
+  const { name, password, is_admin: new_is_admin } = req.body || {};
 
   if (!name || !password) {
     return res.status(400).json({ error: "Nombre y contraseña requeridos" });
@@ -48,7 +41,7 @@ export const createUser = async (req: Request, res: Response) => {
     .from("users")
     .select("id")
     .eq("name", name)
-    .eq("company_id", companyId)
+    .eq("company_id", company_id)
     .maybeSingle<Pick<User, "id">>();
 
   if (existing) {
@@ -64,8 +57,8 @@ export const createUser = async (req: Request, res: Response) => {
     .insert({
       name,
       password: hash,
-      is_admin: !!newIsAdmin,
-      company_id: companyId,
+      is_admin: !!new_is_admin,
+      company_id,
     })
     .select()
     .single<User>();
@@ -74,23 +67,18 @@ export const createUser = async (req: Request, res: Response) => {
     return res.status(500).json({ error: error?.message });
   }
 
-  return res.status(201).json({
-    id: user.id,
-    name: user.name,
-    isAdmin: user.is_admin,
-    companyId: user.company_id,
-  });
+  return res.status(201).json(user);
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
-  const { companyId, isAdmin, userId } = (req as any).user;
-  const idToDelete = Number(req.params.id);
+  const { company_id, is_admin, user_id } = (req as any).user;
+  const id_to_delete = Number(req.params.id);
 
-  if (!isAdmin) {
+  if (!is_admin) {
     return res.status(403).json({ error: "Solo administradores." });
   }
 
-  if (idToDelete === userId) {
+  if (id_to_delete === user_id) {
     return res
       .status(400)
       .json({ error: "No podés eliminar tu propio usuario." });
@@ -99,8 +87,8 @@ export const deleteUser = async (req: Request, res: Response) => {
   const { data: user } = await supabase
     .from("users")
     .select("id")
-    .eq("id", idToDelete)
-    .eq("company_id", companyId)
+    .eq("id", id_to_delete)
+    .eq("company_id", company_id)
     .single<Pick<User, "id">>();
 
   if (!user) {
@@ -110,8 +98,8 @@ export const deleteUser = async (req: Request, res: Response) => {
   const { error } = await supabase
     .from("users")
     .delete()
-    .eq("id", idToDelete)
-    .eq("company_id", companyId);
+    .eq("id", id_to_delete)
+    .eq("company_id", company_id);
 
   if (error) {
     return res.status(500).json({ error: error.message });

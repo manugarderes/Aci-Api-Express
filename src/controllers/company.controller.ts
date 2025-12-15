@@ -3,12 +3,12 @@ import { supabase } from "../config/supabase.js";
 import type { Company } from "../models/Company.js";
 
 export const getMine = async (req: Request, res: Response) => {
-  const { companyId } = (req as any).user;
+  const { company_id } = (req as any).user;
 
   const { data: company, error } = await supabase
     .from("companies")
     .select("id, name")
-    .eq("id", companyId)
+    .eq("id", company_id)
     .single<Pick<Company, "id" | "name">>();
 
   if (error || !company) {
