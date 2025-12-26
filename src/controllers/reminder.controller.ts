@@ -30,12 +30,20 @@ export const create = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Todos los campos son requeridos" });
   }
 
+  // validar channel
+  const allowedChannels = ["email", "whatsapp"];
+  if (typeof channel !== "string" || !allowedChannels.includes(channel.toLowerCase())) {
+    return res
+      .status(400)
+      .json({ error: `Channel inválido. Debe ser uno de: ${allowedChannels.join(", ")}` });
+  }
+
   const { data: reminder, error } = await supabase
     .from("reminders")
     .insert({
       company_id,
       days_from_due: Number(days_from_due),
-      channel,
+      channel: channel.toLowerCase(),
       template,
     })
     .select()
@@ -79,11 +87,19 @@ export const updateById = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Todos los campos son requeridos" });
   }
 
+  // validar channel
+  const allowedChannels = ["email", "whatsapp"];
+  if (typeof channel !== "string" || !allowedChannels.includes(channel.toLowerCase())) {
+    return res
+      .status(400)
+      .json({ error: `Channel inválido. Debe ser uno de: ${allowedChannels.join(", ")}` });
+  }
+
   const { data: reminder, error } = await supabase
     .from("reminders")
     .update({
       days_from_due: Number(days_from_due),
-      channel,
+      channel: channel.toLowerCase(),
       template,
     })
     .eq("id", id)

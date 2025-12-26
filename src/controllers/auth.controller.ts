@@ -61,6 +61,15 @@ export const register = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Todos los campos son requeridos" });
     }
 
+    // validar contraseña: al menos una mayúscula, un número y más de 5 caracteres
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        error:
+          "La contraseña debe contener al menos una letra mayúscula, un número y más de 5 caracteres",
+      });
+    }
+
     if (master_key !== process.env.MASTER_KEY) {
       return res.status(401).json({ error: "Llave maestra inválida." });
     }
@@ -84,9 +93,7 @@ export const register = async (req: Request, res: Response) => {
       .maybeSingle<Pick<User, "id">>();
 
     if (existing_user) {
-      return res
-        .status(409)
-        .json({ error: "El nombre de usuario ya existe" });
+      return res.status(409).json({ error: "El nombre de usuario ya existe" });
     }
 
     const { data: company, error: company_error } = await supabase
@@ -175,3 +182,79 @@ export const login = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Error desconocido" });
   }
 };
+// export const register = async (req: Request, res: Response) => {
+//   try {
+//     const { company_name, name, password, master_key } = req.body || {};
+
+//     if (!company_name || !name || !password || !master_key) {
+//       return res.status(400).json({ error: "Todos los campos son requeridos" });
+//     }
+
+//     if (master_key !== process.env.MASTER_KEY) {
+//       return res.status(401).json({ error: "Llave maestra inválida." });
+//     }
+
+//     const { data: existing_company } = await supabase
+//       .from("companies")
+//       .select("id")
+//       .eq("name", company_name)
+//       .maybeSingle<Pick<Company, "id">>();
+
+//     if (existing_company) {
+//       return res
+//         .status(409)
+//         .json({ error: "El nombre de la compañía ya existe" });
+//     }
+
+//     const { data: existing_user } = await supabase
+//       .from("users")
+//       .select("id")
+//       .eq("name", name)
+//       .maybeSingle<Pick<User, "id">>();
+
+//     if (existing_user) {
+//       return res
+//         .status(409)
+//         .json({ error: "El nombre de usuario ya existe" });
+//     }
+
+//     const { data: company, error: company_error } = await supabase
+//       .from("companies")
+//       .insert({
+//         name: company_name,
+//         logo: null,
+//         color_primary: null,
+//         color_secondary: null,
+//       })
+//       .select()
+//       .single<Company>();
+
+//     if (company_error || !company) throw company_error;
+
+//     const hash = await bcrypt.hash(password, SALT_ROUNDS);
+
+//     const { data: user, error: user_error } = await supabase
+//       .from("users")
+//       .insert({
+//         name,
+//         password: hash,
+//         is_admin: true,
+//         company_id: company.id,
+//       })
+//       .select()
+//       .single<User>();
+
+//     if (user_error || !user) throw user_error;
+
+//     const token = makeToken(user);
+
+//     return res.status(201).json({
+//       user,
+//       company,
+//       token,
+//     });
+//   } catch (err) {
+//     console.error("Error en register:", err);
+//     return res.status(500).json({ error: "Error desconocido" });
+//   }
+// };

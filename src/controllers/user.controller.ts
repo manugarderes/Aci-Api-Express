@@ -37,6 +37,15 @@ export const createUser = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Nombre y contraseña requeridos" });
   }
 
+  // validar contraseña: al menos una mayúscula, un número y más de 5 caracteres
+  const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      error:
+        "La contraseña debe contener al menos una letra mayúscula, un número y más de 5 caracteres",
+    });
+  }
+
   const { data: existing } = await supabase
     .from("users")
     .select("id")
@@ -68,6 +77,94 @@ export const createUser = async (req: Request, res: Response) => {
   }
 
   return res.status(201).json(user);
+};
+
+// actualizar usuario
+export const updateUser = async (req: Request, res: Response) => {
+  const { company_id, is_admin, user_id } = (req as any).user;
+  const id_to_update = Number(req.params.id);
+
+  // permisos: admin puede actualizar cualquiera, user solo a sí mismo
+  if (!is_admin && id_to_update !== user_id) {
+    return res.status(403).json({ error: "No autorizado" });
+  }
+
+  const { name, password, is_admin: new_is_admin } = req.body || {};
+
+  if (!name && !password && new_is_admin === undefined) {
+    return res
+      .status(400)
+      .json({
+        error: "Al menos un campo (name, password, is_admin) es requerido",
+      });
+  }
+
+  // si se intenta cambiar is_admin, solo admin puede hacerlo
+  if (new_is_admin !== undefined && !is_admin) {
+    return res
+      .status(403)
+      .json({ error: "Solo administradores pueden cambiar is_admin" });
+  }
+
+  // si cambian nombre, verificar unicidad dentro de la compañía (excluyendo el propio)
+  if (name) {
+    const { data: existingName } = await supabase
+      .from("users")
+      .select("id")
+      .eq("company_id", company_id)
+      .eq("name", name)
+      .neq("id", id_to_update)
+      .maybeSingle<Pick<User, "id">>();
+
+    if (existingName) {
+      return res
+        .status(409)
+        .json({ error: "Ya existe un usuario con ese nombre" });
+    }
+  }
+
+  const updates: any = {};
+  if (name) updates.name = name;
+  if (new_is_admin !== undefined) updates.is_admin = !!new_is_admin;
+  if (password) {
+    // validar contraseña: al menos una mayúscula, un número y más de 5 caracteres
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        error:
+          "La contraseña debe contener al menos una letra mayúscula, un número y más de 5 caracteres",
+      });
+    }
+    updates.password = await bcrypt.hash(password, SALT_ROUNDS);
+  }
+
+  // verificar existencia del usuario en la compañía
+  const { data: existingUser } = await supabase
+    .from("users")
+    .select("id")
+    .eq("id", id_to_update)
+    .eq("company_id", company_id)
+    .maybeSingle<Pick<User, "id">>();
+
+  if (!existingUser) {
+    return res.status(404).json({ error: "Usuario no encontrado" });
+  }
+
+  const { data: user, error } = await supabase
+    .from("users")
+    .update(updates)
+    .eq("id", id_to_update)
+    .eq("company_id", company_id)
+    .select("id, name, is_admin, company_id")
+    .single<User>();
+
+  if (error || !user) {
+    return res
+      .status(500)
+      .json({ error: error?.message || "Error al actualizar" });
+  }
+
+  return res.json(user);
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
