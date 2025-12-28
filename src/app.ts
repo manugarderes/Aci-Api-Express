@@ -12,6 +12,7 @@ import reminderRoutes from "./routes/reminder.routes.js";
 import { errorHandler } from "./utils/error.js";
 
 
+
 dotenv.config();
 
 const app = express();
