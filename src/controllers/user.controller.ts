@@ -50,7 +50,6 @@ export const createUser = async (req: Request, res: Response) => {
     .from("users")
     .select("id")
     .eq("name", name)
-    .eq("company_id", company_id)
     .maybeSingle<Pick<User, "id">>();
 
   if (existing) {
@@ -106,12 +105,11 @@ export const updateUser = async (req: Request, res: Response) => {
       .json({ error: "Solo administradores pueden cambiar is_admin" });
   }
 
-  // si cambian nombre, verificar unicidad dentro de la compañía (excluyendo el propio)
+
   if (name) {
     const { data: existingName } = await supabase
       .from("users")
       .select("id")
-      .eq("company_id", company_id)
       .eq("name", name)
       .neq("id", id_to_update)
       .maybeSingle<Pick<User, "id">>();
