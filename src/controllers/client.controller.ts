@@ -82,9 +82,7 @@ export const create = async (req: Request, res: Response) => {
     "points",
   ]);
   if (missing)
-    return res
-      .status(400)
-      .json({ error: `Faltan campos: ${missing.join(", ")}` });
+    return res.status(400).json({ error: "Todos los campos son requeridos" });
 
   // validaciones de formato
   if (!isValidEmail(email)) {
@@ -148,9 +146,7 @@ export const updateById = async (req: Request, res: Response) => {
     "points",
   ]);
   if (missing)
-    return res
-      .status(400)
-      .json({ error: `Faltan campos: ${missing.join(", ")}` });
+   return res.status(400).json({ error: "Todos los campos son requeridos" });
 
   // validaciones de formato en update también
   if (!isValidEmail(email)) {
