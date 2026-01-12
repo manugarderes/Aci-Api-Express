@@ -28,7 +28,7 @@ export const getMetrics = async (req: Request, res: Response) => {
     const { data: tickets, error: tError } = await supabase
       .from('tickets')
       .select(`
-        total, paid, due_date, receipt_url,
+        total, paid, due_date, payment_url,
         clients!inner(company_id)
       `)
       .eq('clients.company_id', company_id);
@@ -66,7 +66,7 @@ export const getMetrics = async (req: Request, res: Response) => {
       : 0;
 
     // Tickets para revisar (con comprobante pero no marcados como pagados) [cite: 211, 754]
-    const ticketsParaRevisar = tickets.filter(t => t.receipt_url && !t.paid).length;
+    const ticketsParaRevisar = tickets.filter(t => t.payment_url && !t.paid).length;
 
     // Días de mora promedio (DSO) [cite: 258, 301]
     const hoy = new Date();
