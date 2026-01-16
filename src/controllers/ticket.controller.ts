@@ -348,26 +348,20 @@ export const payWithSecret = async (req: Request, res: Response) => {
 };
 
 export const getPublicTicket = async (req: Request, res: Response) => {
-  const id = Number(req.params.id);
-  const secret = req.query.secret as string;
+  // Ahora recibimos id y secret por el body para mayor seguridad en la validación
+  const { id, secret } = req.body;
 
-  if (!secret) {
-    return res.status(400).json({ error: "El payment secret es requerido" });
+  if (!id || !secret) {
+    return res.status(400).json({ error: "ID y Secret son requeridos" });
   }
 
-  // Obtenemos el ticket incluyendo los datos del cliente para la vista
   const { data: ticket, error } = await supabase
     .from("tickets")
     .select(
       `
-      *,
-      clients (
-        name,
-        email
-      ),
-      companies (
-        name
-      )
+      id, total, currency, due_date, paid, payment_url, payment_secret,
+      client:clients ( name, email ),
+      company:companies ( name )
     `,
     )
     .eq("id", id)
@@ -377,11 +371,9 @@ export const getPublicTicket = async (req: Request, res: Response) => {
     return res.status(404).json({ error: "Ticket no encontrado" });
   }
 
-  // Validación de seguridad crítica: el secret debe coincidir [cite: 202, 206]
+  // Validación de seguridad inalterable [cite: 202]
   if (ticket.payment_secret !== secret) {
-    return res
-      .status(403)
-      .json({ error: "No autorizado para ver este ticket" });
+    return res.status(403).json({ error: "Código de seguridad inválido" });
   }
 
   return res.json(ticket);
