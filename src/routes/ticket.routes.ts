@@ -15,7 +15,7 @@ import {
 const router = Router();
 
 router.post("/:id/pay", payWithSecret);
-router.get("/public", getPublicTicket);
+router.post("/public", getPublicTicket);
 
 router.use(authMiddleware);
 
