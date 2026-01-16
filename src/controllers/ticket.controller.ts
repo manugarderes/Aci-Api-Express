@@ -85,7 +85,7 @@ export const getAllUnPaid = async (req: Request, res: Response) => {
       `
       *,
       client:clients!inner (*)
-    `
+    `,
     )
     .eq("paid", false)
     .eq("client.company_id", company_id)
@@ -110,7 +110,7 @@ export const getAllPaid = async (req: Request, res: Response) => {
       `
       *,
       client:clients!inner (*)
-    `
+    `,
     )
     .eq("paid", true)
     .eq("client.company_id", company_id)
@@ -136,7 +136,7 @@ export const getById = async (req: Request, res: Response) => {
       `
       *,
       client:clients!inner (*)
-    `
+    `,
     )
     .eq("id", id)
     .eq("client.company_id", company_id)
@@ -211,7 +211,7 @@ export const updateById = async (req: Request, res: Response) => {
       `
       id,
       client:clients!inner (company_id)
-    `
+    `,
     )
     .eq("id", id)
     .eq("client.company_id", company_id)
@@ -255,7 +255,7 @@ export const removeById = async (req: Request, res: Response) => {
       `
       id,
       client:clients!inner (company_id)
-    `
+    `,
     )
     .eq("id", id)
     .eq("client.company_id", company_id)
@@ -345,4 +345,44 @@ export const payWithSecret = async (req: Request, res: Response) => {
     payment_url: updated.payment_url,
     paid: updated.paid,
   });
+};
+
+export const getPublicTicket = async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const secret = req.query.secret as string;
+
+  if (!secret) {
+    return res.status(400).json({ error: "El payment secret es requerido" });
+  }
+
+  // Obtenemos el ticket incluyendo los datos del cliente para la vista
+  const { data: ticket, error } = await supabase
+    .from("tickets")
+    .select(
+      `
+      *,
+      clients (
+        name,
+        email
+      ),
+      companies (
+        name
+      )
+    `,
+    )
+    .eq("id", id)
+    .single();
+
+  if (error || !ticket) {
+    return res.status(404).json({ error: "Ticket no encontrado" });
+  }
+
+  // Validación de seguridad crítica: el secret debe coincidir [cite: 202, 206]
+  if (ticket.payment_secret !== secret) {
+    return res
+      .status(403)
+      .json({ error: "No autorizado para ver este ticket" });
+  }
+
+  return res.json(ticket);
 };
