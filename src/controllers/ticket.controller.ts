@@ -348,7 +348,6 @@ export const payWithSecret = async (req: Request, res: Response) => {
 };
 
 export const getPublicTicket = async (req: Request, res: Response) => {
-  // Ahora recibimos id y secret por el body para mayor seguridad en la validación
   const { id, secret } = req.body;
 
   if (!id || !secret) {
@@ -359,19 +358,29 @@ export const getPublicTicket = async (req: Request, res: Response) => {
     .from("tickets")
     .select(
       `
-      id, total, currency, due_date, paid, payment_url, payment_secret,
-      client:clients ( name, email ),
-      company:companies ( name )
+      id, 
+      total, 
+      currency, 
+      due_date, 
+      paid, 
+      payment_url, 
+      payment_secret,
+      client:clients ( 
+        name, 
+        email,
+        company:companies ( name ) 
+      )
     `,
     )
     .eq("id", id)
     .single();
 
   if (error || !ticket) {
+    console.log("error: ", error);
     return res.status(404).json({ error: "Ticket no encontrado" });
   }
 
-  // Validación de seguridad inalterable [cite: 202]
+  // Validación de seguridad inalterable basada en requerimientos [cite: 202, 298]
   if (ticket.payment_secret !== secret) {
     return res.status(403).json({ error: "Código de seguridad inválido" });
   }
