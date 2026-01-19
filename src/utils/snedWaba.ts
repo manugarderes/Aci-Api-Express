@@ -10,7 +10,7 @@ export const sendWabaTemplate = async (
 ) => {
   const url = `https://graph.facebook.com/v19.0/${process.env.WABA_PHONE_NUMBER_ID}/messages`;
 
-  const sentText = `Hola ${clientName}. 👋 Te contactamos de ${companyName} en relación a tu factura pendiente por un total de ${currency} ${total}, con vencimiento el día ${dueDate}. Le recordamos que mantener sus pagos al día le permite seguir disfrutando de nuestros servicios de gestión de residuos sin interrupciones. Puedes gestionar tu pago o subir tu comprobante directamente en nuestro portal. Si tienes alguna duda, estamos para ayudarte. 😊`;
+  const sentText = `Hola ${clientName}. 👋 Te contactamos de ${companyName} en relación a tu factura pendiente por un total de ${currency} ${total}, con vencimiento el día ${dueDate}. Le recordamos que mantener sus pagos al día le permite seguir disfrutando de nuestros servicios sin interrupciones. Puedes gestionar tu pago o subir tu comprobante directamente en nuestro portal. Si tienes alguna duda, estamos para ayudarte. 😊`;
 
   const data = {
     messaging_product: "whatsapp",
