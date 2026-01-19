@@ -131,12 +131,12 @@ export const processAutomatedReminders = async (req: any, res: any) => {
 
                 console.log("🧠 Texto generado por IA: ", contentToSave);
 
-                // await sendEmail({
-                //   to: ticket.client.email,
-                //   subject: `Recordatorio de Pago - ${company.name}`,
-                //   html: `<p>${contentToSave.replace(/\n/g, "<br>")}</p>`,
-                //   text: contentToSave,
-                // });
+                await sendEmail({
+                  to: ticket.client.email,
+                  subject: `Recordatorio de Pago - ${company.name}`,
+                  html: `<p>${contentToSave.replace(/\n/g, "<br>")}</p>`,
+                  text: contentToSave,
+                });
 
                 console.log("📩 Contenido enviado por mail");
               }
