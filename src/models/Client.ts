@@ -2,7 +2,7 @@ export interface Client {
   id: number;
   name: string;
   email: string;
-  phone: string;
+  phone: number;
   points: number;
   company_id: number;
   created_at: string;

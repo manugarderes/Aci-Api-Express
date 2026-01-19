@@ -1,51 +1,8 @@
 import { Request, Response } from "express";
 import { supabase } from "../config/supabase.js";
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI,
-});
-
-const generateAIContent = async (ticket: any, reminder: any) => {
-  try {
-    const systemPrompt = `Actúa como un agente de cobranza profesional para la empresa "${ticket.client?.company?.name}". Tu tarea es redactar recordatorios de pago efectivos y cordiales.`;
-
-    const userPrompt = `
-      Redacta un mensaje para el cliente "${ticket.client?.name}".
-      
-      Datos de la deuda:
-      - Monto: ${ticket.currency} ${ticket.total}
-      - Vencimiento: ${ticket.due_date}
-      - Canal de envío: ${reminder.channel}
-      - Instrucción base: ${reminder.template}
-      
-      Reglas de formato:
-      1. Si es WhatsApp: Usa emojis, sé breve y directo.
-      2. Si es Email: Usa un asunto claro y cuerpo formal.
-      3. No inventes enlaces. Solo menciona que puede subir su comprobante en el portal de pagos.
-      4. Devuelve SOLO el texto del mensaje, sin comillas ni introducciones.
-    `;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Modelo rápido y económico
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 300,
-    });
-
-    const text = completion.choices[0].message.content;
-
-    if (!text) throw new Error("OpenAI devolvió una respuesta vacía.");
-
-    return text;
-  } catch (err: any) {
-    console.error("Error en OpenAI:", err.message);
-    return `Hola ${ticket.client?.name}, le recordamos que su factura de ${ticket.currency} ${ticket.total} con vencimiento el ${ticket.due_date} se encuentra pendiente.`;
-  }
-};
+import { generateAIContent } from "../utils/generateAi.js";
+import { sendWabaTemplate } from "../utils/snedWaba.js";
+import { sendEmail } from "../utils/sendEmail.js";
 
 export const getAll = async (req: Request, res: Response) => {
   const { company_id } = (req as any).user;
@@ -98,6 +55,8 @@ export const getById = async (req: Request, res: Response) => {
 // ------------------------------------------------------------------
 
 export const processAutomatedReminders = async (req: any, res: any) => {
+  console.log("⏰ CRON activado");
+
   try {
     const { data: companies, error: compError } = await supabase
       .from("companies")
@@ -119,7 +78,7 @@ export const processAutomatedReminders = async (req: any, res: any) => {
           `
           *,
           client:clients!inner (
-            id, name, email, company_id,
+            id, name, email, phone, company_id,
             company:companies ( name )
           )
         `,
@@ -151,19 +110,48 @@ export const processAutomatedReminders = async (req: any, res: any) => {
               .maybeSingle();
 
             if (!existingMessage) {
-              const aiContent = await generateAIContent(ticket, reminder);
+              console.log("✅ Igualdad de recordatorio y ticket encontrada");
 
+              let contentToSave = "";
+
+              if (reminder.channel === "whatsapp") {
+                // 1. Envío por WhatsApp: Retorna el texto exacto de la plantilla aprobada
+                contentToSave = await sendWabaTemplate(
+                  ticket.client.phone,
+                  ticket.client.name,
+                  company.name,
+                  ticket.currency,
+                  ticket.total,
+                  ticket.due_date,
+                );
+                console.log("💬 Plantilla enviada por WSP: ", contentToSave);
+              } else {
+                // 2. Envío por Email: Generación de contenido con IA y envío vía SendGrid
+                contentToSave = await generateAIContent(ticket, reminder);
+
+                console.log("🧠 Texto generado por IA: ", contentToSave);
+
+                await sendEmail({
+                  to: ticket.client.email,
+                  subject: `Recordatorio de Pago - ${company.name}`,
+                  html: `<p>${contentToSave.replace(/\n/g, "<br>")}</p>`,
+                  text: contentToSave,
+                });
+
+                console.log("📩 Contenido enviado por mail");
+              }
+
+              // 3. Registro de evidencia en Supabase para auditoría y KPIs (RNF7)
               await supabase.from("messages").insert({
                 type: reminder.channel === "email" ? "MAIL" : "WSP",
-                content: aiContent,
+                content: contentToSave,
                 ticket_id: ticket.id,
                 reminder_id: reminder.id,
               });
 
+              console.log("✅ Mensaje guardado en BD");
+
               totalMensajesEnviados++;
-              console.log(
-                `[OpenAI] Mensaje generado para ticket #${ticket.id}`,
-              );
             }
           }
         }

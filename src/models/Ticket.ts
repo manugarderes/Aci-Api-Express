@@ -1,6 +1,6 @@
 export interface Ticket {
   id: number;
-  total: number;          
+  total: number;
   currency: string;
   due_date: string | null; // date
   ticket_url: string | null;

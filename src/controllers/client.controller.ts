@@ -22,18 +22,24 @@ const isValidEmail = (email: unknown) => {
   return re.test(email.trim());
 };
 
-// E.164-like: comienza con + seguido de 8 a 15 dígitos
 const isValidPhone = (phone: unknown) => {
   if (typeof phone !== "string") return false;
-  const re = /^\+\d{8,15}$/;
-  return re.test(phone.trim());
+
+  const trimmedPhone = phone.trim();
+
+  const re = /^\d{8,15}$/;
+  if (!re.test(trimmedPhone)) return false;
+
+  const num = Number(trimmedPhone);
+
+  return !Number.isNaN(num) && Number.isSafeInteger(num);
 };
 
 const existsUnique = async (
   company_id: number,
   field: "name" | "email" | "phone",
   value: string,
-  excludeId?: number
+  excludeId?: number,
 ) => {
   let builder = supabase
     .from("clients")
@@ -48,7 +54,7 @@ const existsUnique = async (
 const checkAllUnique = async (
   company_id: number,
   payload: any,
-  excludeId?: number
+  excludeId?: number,
 ) => {
   if (
     payload.name &&
@@ -89,12 +95,10 @@ export const create = async (req: Request, res: Response) => {
     return res.status(400).json({ error: "Email inválido" });
   }
   if (!isValidPhone(phone)) {
-    return res
-      .status(400)
-      .json({
-        error:
-          "Teléfono inválido. Debe comenzar con '+' y contener entre 8 y 15 dígitos.",
-      });
+    return res.status(400).json({
+      error:
+        "Teléfono inválido. Debe ser un número de entre 8 y 15 dígitos sin símbolos.",
+    });
   }
 
   const conflict = await checkAllUnique(company_id, { name, email, phone });
@@ -102,7 +106,7 @@ export const create = async (req: Request, res: Response) => {
 
   const { data: client, error } = await supabase
     .from("clients")
-    .insert({ name, email, phone, points, company_id })
+    .insert({ name, email, phone: Number(phone), points, company_id })
     .select()
     .single<Client>();
 
@@ -146,19 +150,17 @@ export const updateById = async (req: Request, res: Response) => {
     "points",
   ]);
   if (missing)
-   return res.status(400).json({ error: "Todos los campos son requeridos" });
+    return res.status(400).json({ error: "Todos los campos son requeridos" });
 
   // validaciones de formato en update también
   if (!isValidEmail(email)) {
     return res.status(400).json({ error: "Email inválido" });
   }
   if (!isValidPhone(phone)) {
-    return res
-      .status(400)
-      .json({
-        error:
-          "Teléfono inválido. Debe comenzar con '+' y contener entre 8 y 15 dígitos.",
-      });
+    return res.status(400).json({
+      error:
+        "Teléfono inválido. Debe ser un número de entre 8 y 15 dígitos sin símbolos.",
+    });
   }
 
   const conflict = await checkAllUnique(company_id, { name, email, phone }, id);
@@ -166,7 +168,7 @@ export const updateById = async (req: Request, res: Response) => {
 
   const { data: client, error } = await supabase
     .from("clients")
-    .update({ name, email, phone, points })
+    .update({ name, email, phone: Number(phone), points })
     .eq("id", id)
     .eq("company_id", company_id)
     .select()
@@ -193,9 +195,9 @@ export const removeById = async (req: Request, res: Response) => {
   }
 
   if (linkedTicket) {
-    return res
-      .status(400)
-      .json({ error: "El cliente tiene tickets vinculados y no puede eliminarse" });
+    return res.status(400).json({
+      error: "El cliente tiene tickets vinculados y no puede eliminarse",
+    });
   }
 
   const { error, count } = await supabase
