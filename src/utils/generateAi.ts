@@ -21,9 +21,12 @@ Datos de la deuda:
 
 Reglas de formato:
 1. Si es WhatsApp: Usa emojis, sé breve y directo.
-2. Si es Email: Usa un asunto claro y cuerpo formal.
-3. No inventes enlaces. Solo menciona que puede subir su comprobante en el portal de pagos.
-4. Devuelve SOLO el texto del mensaje, sin comillas ni introducciones.
+2. Si es Email: NO crees un asunto. Comenzá directamente con el cuerpo formal del mail.
+3. No inventes enlaces ni información que no exista en los datos de la deuda o en la instrucción base.
+4. No devuelvas placeholders ni texto para completar. El mensaje debe estar completamente listo para enviar.
+5. Si es Email, la firma debe ser siempre exactamente:
+   Saludos,
+   ${ticket.client?.company?.name}
     `.trim();
 
     const resp = await openai.responses.create({
