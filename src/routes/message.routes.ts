@@ -11,11 +11,11 @@ const router = Router();
 
 router.get("/test-cron", processAutomatedReminders);
 
+router.get("/webhook", verifyWebhook);
+
 router.use(authMiddleware);
 
 router.get("/", getAll);
 router.get("/:id", getById);
-
-router.get("/webhook", verifyWebhook);
 
 export default router;
