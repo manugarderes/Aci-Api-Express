@@ -106,10 +106,9 @@ export const processAutomatedReminders = async (req: any, res: any) => {
               .from("messages")
               .select("id")
               .eq("ticket_id", ticket.id)
-              .eq("reminder_id", reminder.id)
-              .maybeSingle();
+              .eq("reminder_id", reminder.id);
 
-            if (!existingMessage) {
+            if (!existingMessage || existingMessage.length == 0) {
               console.log("✅ Igualdad de recordatorio y ticket encontrada");
 
               let contentToSave = "";
