@@ -180,3 +180,38 @@ export const verifyWebhook = (req: Request, res: Response) => {
 
   return res.sendStatus(403);
 };
+
+export const handleIncomingMessage = async (req: Request, res: Response) => {
+  try {
+    const body = req.body;
+
+    // Log para ver en Vercel exactamente qué llega cuando enviás un WhatsApp
+    console.log("Nuevo Webhook recibido:", JSON.stringify(body, null, 2));
+
+    // Validar que el objeto sea de WhatsApp
+    if (body.object === "whatsapp_business_account") {
+      const entry = body.entry?.[0];
+      const changes = entry?.changes?.[0];
+      const value = changes?.value;
+      const message = value?.messages?.[0];
+
+      if (message) {
+        const from = message.from; // Número de teléfono del cliente
+        const text = message.text?.body; // Contenido del mensaje
+
+        console.log(`Mensaje de ${from}: ${text}`);
+
+        // Aquí es donde ACI cumple el RF.12 (Seguimiento de interacciones)
+        // Guardarías en la base de datos de Supabase vinculando al cliente [cite: 131, 212]
+      }
+
+      // IMPORTANTE: Meta exige un 200 OK rápido para no reintentar el envío
+      return res.status(200).send("EVENT_RECEIVED");
+    }
+
+    return res.sendStatus(404);
+  } catch (error) {
+    console.error("Error en handleIncomingMessage:", error);
+    return res.sendStatus(500);
+  }
+};
