@@ -128,13 +128,17 @@ export const processAutomatedReminders = async (req: any, res: any) => {
                 // 2. Envío por Email: Generación de contenido con IA y envío vía SendGrid
                 contentToSave = await generateAIContent(ticket, reminder);
 
+                const paymentUrl = `https://aci-ort.vercel.app/payment?id=${ticket.id}&secret=${ticket.payment_secret}`;
+                const footerHtml = `<br><br>---<br>Puedes ver los detalles y gestionar tu pago aquí:<br><a href="${paymentUrl}">Ver más</a>`;
+                const footerText = `\n\n---\nPuedes ver los detalles y gestionar tu pago aquí:\n${paymentUrl}`;
+
                 console.log("🧠 Texto generado por IA: ", contentToSave);
 
                 await sendEmail({
                   to: ticket.client.email,
                   subject: `Recordatorio de Pago - ${company.name}`,
-                  html: `<p>${contentToSave.replace(/\n/g, "<br>")}</p>`,
-                  text: contentToSave,
+                  html: `<p>${contentToSave.replace(/\n/g, "<br>")}</p>${footerHtml}`,
+                  text: contentToSave + footerText,
                 });
 
                 console.log("📩 Contenido enviado por mail");
